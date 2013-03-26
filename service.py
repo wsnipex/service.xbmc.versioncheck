@@ -54,8 +54,7 @@ class Main:
             elif sys.argv[0] and sys.argv[1] == 'started':
                 if xbmc.getCondVisibility('System.Platform.Linux'):
                     packages = ['xbmc']
-                    oldversion, message = _versionchecklinux(packages)
-                    linux = True
+                    _versionchecklinux(packages)
                 else:
                     oldversion, message = _versioncheck()
                 if oldversion:
@@ -207,30 +206,35 @@ def _versioncheckapt(packages):
            log("Version available  %s" %cache[pkg].candidate.version)
            oldversion = True
            msg = __localize__(32011)
+           # Ask user to upgrade
+           if xbmcgui.Dialog().yesno(__addonname__, __localize__(32012)):
+               result = _aptrunupgrade(apt_client, packages)
        elif (cache[pkg].installed):
            log("Already on newest version  %s" %cache[pkg].installed.version)
        else:
            log("No installed package found, probably manual install")
-           sys.exit(0)
-
-    return oldversion, msg
+           
+    #sys.exit(0)
+    #return oldversion, msg
+    return
 
 def _apttransstarted():
     pass
 
 def _apterrorhandler(error):
-    raise error
+    log("Apt Error %s" %error)
 
-def _aptrunupgrade(packages):
-    from aptdaemon import client
-    apt_client = client.AptClient()
-    log("Installing new version")
-    if (apt_client.upgrade_packages(packages, wait=True) == "exit-success"):
-        log("Installation finished successfully")
-    else:
-        log("Error during installation")
-        
-def _upgrademessage(msg, linux, packages):
+def _aptrunupgrade(apt_client, packages):
+    try:
+        log("Installing new version")
+        result = apt_client.upgrade_packages(packages, wait=True)
+        log("Installation finished with %s" %result)
+    except Exception as error:
+        log("Exception while updating: %s" %error)
+        #loop.quit()
+    return result
+    
+def _upgrademessage(msg):
     # Don't show while watching a video
     while(xbmc.Player().isPlayingVideo() and not xbmc.abortRequested):
         xbmc.sleep(1000)
