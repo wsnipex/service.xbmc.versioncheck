@@ -57,8 +57,8 @@ class Main:
                     _versionchecklinux(packages)
                 else:
                     oldversion, message = _versioncheck()
-                if oldversion:
-                    _upgrademessage(message, linux, packages)
+                    if oldversion:
+                        _upgrademessage(message)
             else:
                 pass
                 
@@ -162,11 +162,10 @@ def _versioncheck():
 def _versionchecklinux(packages):
     if (platform.dist()[0] == "Ubuntu" or platform.dist()[0] == "Debian"):
         log("running apt version check for package %s" %packages)
-        oldversion, msg = _versioncheckapt(packages)
+        _versioncheckapt(packages)
     else:
         log("Unsupported platform %s" %platform.dist()[0])
         sys.exit(0)
-    return oldversion, msg
         
 def _versioncheckapt(packages):
     #check for linux using Apt
@@ -209,6 +208,8 @@ def _versioncheckapt(packages):
            # Ask user to upgrade
            if xbmcgui.Dialog().yesno(__addonname__, __localize__(32012)):
                result = _aptrunupgrade(apt_client, packages)
+           else:
+               log("upgrade cancelled by user")
        elif (cache[pkg].installed):
            log("Already on newest version  %s" %cache[pkg].installed.version)
        else:
@@ -216,8 +217,7 @@ def _versioncheckapt(packages):
            
     #sys.exit(0)
     #return oldversion, msg
-    return
-
+    
 def _apttransstarted():
     pass
 
@@ -259,14 +259,10 @@ def _upgrademessage(msg):
     # Show notification after firstrun
     elif not xbmc.abortRequested:
         log(__localize__(32001) + '' + __localize__(32002))
-        if linux and xbmcgui.Dialog().yesno(__addonname__, __localize__(32012)):
-            _aptrunupgrade(packages)
-        else:
-            xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
-                                                                      __localize__(32001) + '' + __localize__(32002),
-                                                                      15000,
-                                                                      __icon__))
-        
+        xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
+                                                                  __localize__(32001) + '' + __localize__(32002),
+                                                                  15000,
+                                                                  __icon__))
     else:
         pass
 
