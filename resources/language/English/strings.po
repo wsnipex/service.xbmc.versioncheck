@@ -60,6 +60,10 @@ msgctxt "#32011"
 msgid "Use your package manager(apt) to upgrade."
 msgstr ""
 
+msgctxt "#32012"
+msgid "Do you want to upgrade now?"
+msgstr ""
+
 msgctxt "#32020"
 msgid "General"
 msgstr ""
