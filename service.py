@@ -45,17 +45,21 @@ def log(txt):
 
 class Main:
     def __init__(self):
+        linux = False
+        packages = []
         if __addon__.getSetting("versioncheck_enable") == 'true' and not xbmc.getCondVisibility('System.HasAddon(os.openelec.tv)'):
             if not sys.argv[0]:
                 xbmc.executebuiltin('XBMC.AlarmClock(CheckAtBoot,XBMC.RunScript(service.xbmc.versioncheck, started),00:00:30,silent)')
                 xbmc.executebuiltin('XBMC.AlarmClock(CheckWhileRunning,XBMC.RunScript(service.xbmc.versioncheck, started),24:00:00,silent,loop)')
             elif sys.argv[0] and sys.argv[1] == 'started':
                 if xbmc.getCondVisibility('System.Platform.Linux'):
-                    oldversion, message = _versionchecklinux('xbmc')
+                    packages = ['xbmc']
+                    oldversion, message = _versionchecklinux(packages)
+                    linux = True
                 else:
                     oldversion, message = _versioncheck()
                 if oldversion:
-                    _upgrademessage(message)
+                    _upgrademessage(message, linux, packages)
             else:
                 pass
                 
@@ -156,15 +160,16 @@ def _versioncheck():
     return oldversion, msg
 
 
-def _versionchecklinux(package):
+def _versionchecklinux(packages):
     if (platform.dist()[0] == "Ubuntu" or platform.dist()[0] == "Debian"):
-        oldversion, msg = _versioncheckapt(package)
+        log("running apt version check for package %s" %packages)
+        oldversion, msg = _versioncheckapt(packages)
     else:
         log("Unsupported platform %s" %platform.dist()[0])
         sys.exit(0)
     return oldversion, msg
         
-def _versioncheckapt(package):
+def _versioncheckapt(packages):
     #check for linux using Apt
     # initial vars
     oldversion = False
@@ -190,20 +195,20 @@ def _versioncheckapt(package):
         log("You are not allowed to update the cache")
         sys.exit(0)
     
-    trans = apt_client.upgrade_packages([package])
+    trans = apt_client.upgrade_packages(packages)
     trans.simulate(reply_handler=_apttransstarted, error_handler=_apterrorhandler)
     pkg = trans.packages[4][0]
-    if (pkg == package):
+    if (pkg in packages):
        cache=apt.Cache()
        cache.open(None)
        cache.upgrade()
-       if (cache[package].installed and cache[package].installed.version != cache[package].candidate.version):
-           log("Version installed  %s" %cache[package].installed.version)
-           log("Version available  %s" %cache[package].candidate.version)
+       if (cache[pkg].installed and cache[pkg].installed.version != cache[pkg].candidate.version):
+           log("Version installed  %s" %cache[pkg].installed.version)
+           log("Version available  %s" %cache[pkg].candidate.version)
            oldversion = True
            msg = __localize__(32011)
-       elif (cache[package].installed):
-           log("Already on newest version  %s" %cache[package].installed.version)
+       elif (cache[pkg].installed):
+           log("Already on newest version  %s" %cache[pkg].installed.version)
        else:
            log("No installed package found, probably manual install")
            sys.exit(0)
@@ -216,7 +221,16 @@ def _apttransstarted():
 def _apterrorhandler(error):
     raise error
 
-def _upgrademessage(msg):
+def _aptrunupgrade(packages):
+    from aptdaemon import client
+    apt_client = client.AptClient()
+    log("Installing new version")
+    if (apt_client.upgrade_packages(packages, wait=True) == "exit-success"):
+        log("Installation finished successfully")
+    else:
+        log("Error during installation")
+        
+def _upgrademessage(msg, linux, packages):
     # Don't show while watching a video
     while(xbmc.Player().isPlayingVideo() and not xbmc.abortRequested):
         xbmc.sleep(1000)
@@ -241,10 +255,14 @@ def _upgrademessage(msg):
     # Show notification after firstrun
     elif not xbmc.abortRequested:
         log(__localize__(32001) + '' + __localize__(32002))
-        xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
-                                                                  __localize__(32001) + '' + __localize__(32002),
-                                                                  15000,
-                                                                  __icon__))
+        if linux and xbmcgui.Dialog().yesno(__addonname__, __localize__(32012)):
+            _aptrunupgrade(packages)
+        else:
+            xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
+                                                                      __localize__(32001) + '' + __localize__(32002),
+                                                                      15000,
+                                                                      __icon__))
+        
     else:
         pass
 
