@@ -215,8 +215,6 @@ def _versioncheckapt(packages):
        else:
            log("No installed package found, probably manual install")
            
-    #sys.exit(0)
-    #return oldversion, msg
     
 def _apttransstarted():
     pass
@@ -231,7 +229,7 @@ def _aptrunupgrade(apt_client, packages):
         log("Installation finished with %s" %result)
     except Exception as error:
         log("Exception while updating: %s" %error)
-        #loop.quit()
+
     return result
     
 def _upgrademessage(msg):
