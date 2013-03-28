@@ -1,14 +1,6 @@
 [Untrusted Upgrade]
 Identity=unix-user:xbmc
-Action=org.debian.apt.upgrade-packages
-ResultAny=yes
+Action=org.debian.apt.upgrade-packages;org.debian.apt.update-cache
+ResultAny=no
 ResultInactive=yes
 ResultActive=yes
-
-[Untrusted Update]
-Identity=unix-user:xbmc
-Action=org.debian.apt.update-cache
-ResultAny=yes
-ResultInactive=yes
-ResultActive=yes
-
