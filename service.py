@@ -181,6 +181,7 @@ def _versioncheckapt(packages):
     except:
         log('python apt import error')
         sys.exit(0)
+        
     apt_client = client.AptClient()
     try:
         result = apt_client.update_cache(wait=True)
@@ -202,12 +203,11 @@ def _versioncheckapt(packages):
        if (cache[pkg].installed and cache[pkg].installed.version != cache[pkg].candidate.version):
            log("Version installed  %s" %cache[pkg].installed.version)
            log("Version available  %s" %cache[pkg].candidate.version)
-           oldversion = True
            # Ask user to upgrade
            if _upgrademessage(__localize__(32012), True):
                if _aptrunupgrade(apt_client, packages) == "exit-success":
                    xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
-                                                                              __localize__(32013),
+                                                                              __localize__(32013) + '' + __localize__(32014),
                                                                               15000,
                                                                                __icon__))
            else:
