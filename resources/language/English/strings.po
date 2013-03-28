@@ -68,6 +68,10 @@ msgctxt "#32013"
 msgid "Upgrade successful, please restart Xbmc"
 msgstr ""
 
+msgctxt "#32014"
+msgid "Please restart Xbmc to finish the upgrade"
+msgstr ""
+
 msgctxt "#32020"
 msgid "General"
 msgstr ""
