@@ -58,7 +58,7 @@ class Main:
                 else:
                     oldversion, message = _versioncheck()
                     if oldversion:
-                        _upgrademessage(message)
+                        _upgrademessage(message, False)
             else:
                 pass
                 
@@ -169,7 +169,6 @@ def _versionchecklinux(packages):
         
 def _versioncheckapt(packages):
     #check for linux using Apt
-    # initial vars
     oldversion = False
     msg = ''
     result = ''
@@ -196,7 +195,7 @@ def _versioncheckapt(packages):
     trans = apt_client.upgrade_packages(packages)
     trans.simulate(reply_handler=_apttransstarted, error_handler=_apterrorhandler)
     pkg = trans.packages[4][0]
-    if (pkg in packages):
+    if pkg in packages:
        cache=apt.Cache()
        cache.open(None)
        cache.upgrade()
@@ -204,18 +203,21 @@ def _versioncheckapt(packages):
            log("Version installed  %s" %cache[pkg].installed.version)
            log("Version available  %s" %cache[pkg].candidate.version)
            oldversion = True
-           msg = __localize__(32011)
            # Ask user to upgrade
-           if xbmcgui.Dialog().yesno(__addonname__, __localize__(32012)):
-               result = _aptrunupgrade(apt_client, packages)
+           if _upgrademessage(__localize__(32012), True):
+               if _aptrunupgrade(apt_client, packages) == "exit-success":
+                   xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
+                                                                              __localize__(32013),
+                                                                              15000,
+                                                                               __icon__))
            else:
                log("upgrade cancelled by user")
        elif (cache[pkg].installed):
            log("Already on newest version  %s" %cache[pkg].installed.version)
        else:
            log("No installed package found, probably manual install")
+
            
-    
 def _apttransstarted():
     pass
 
@@ -223,6 +225,7 @@ def _apterrorhandler(error):
     log("Apt Error %s" %error)
 
 def _aptrunupgrade(apt_client, packages):
+    result = ''
     try:
         log("Installing new version")
         result = apt_client.upgrade_packages(packages, wait=True)
@@ -232,7 +235,7 @@ def _aptrunupgrade(apt_client, packages):
 
     return result
     
-def _upgrademessage(msg):
+def _upgrademessage(msg, upgrade):
     # Don't show while watching a video
     while(xbmc.Player().isPlayingVideo() and not xbmc.abortRequested):
         xbmc.sleep(1000)
@@ -257,7 +260,10 @@ def _upgrademessage(msg):
     # Show notification after firstrun
     elif not xbmc.abortRequested:
         log(__localize__(32001) + '' + __localize__(32002))
-        xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
+        if upgrade:
+            return xbmcgui.Dialog().yesno(__addonname__, msg)
+        else:
+            xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
                                                                   __localize__(32001) + '' + __localize__(32002),
                                                                   15000,
                                                                   __icon__))
