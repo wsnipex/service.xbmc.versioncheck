@@ -79,3 +79,7 @@ msgstr ""
 msgctxt "#32021"
 msgid "Enable XBMC version check?"
 msgstr ""
+
+msgctxt "#32022"
+msgid "Please enter your password"
+msgstr ""
