@@ -175,11 +175,14 @@ def _versioncheckapt(packages):
     
     # try to import apt
     try:
-        import apt
+        #import apt
+        import aptdfdf
         from aptdaemon import client
         from aptdaemon import errors
     except:
         log('python apt import error')
+        # try the subprocess route
+        _versioncheckshell(["apt-cache", "policy", packages[0]])
         sys.exit(0)
         
     apt_client = client.AptClient()
@@ -234,6 +237,54 @@ def _aptrunupgrade(apt_client, packages):
         log("Exception while updating: %s" %error)
 
     return result
+
+def _versioncheckshell(command):
+    result = ''
+    cresult = -1
+    installed = ''
+    candidate = ''
+    pwd = ''
+    
+    try:
+        from subprocess import check_output
+        from subprocess import call
+    except:
+        log("subprocess import error")
+        sys.exit(0)
+    
+    log("Using shell version check")
+    print cresult
+    cresult = call(["apt-get", "update"])
+    log("Cache update result %s" %cresult)
+    if cresult == 0:
+        result = check_output(command).split("\n")
+    elif cresult == 100:
+        # User needs to authenticate
+        pwd = _getpassword(__addonname__, 32022)
+        #if os.system('echo \'%s\' | sudo -S apt-get update' %pwd) == 0:
+        if call('echo \'%s\' | sudo -S %s' %(pwd, "apt-get update"), shell=True):
+            cmd = " ".join(command)
+            #result = os.system("echo \'%s\' | sudo -S %s" %(pwd, cmd))
+            #os.system('echo \'%s\' | sudo %s' %pwd, %" ".join(command))
+            result = check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True).split("\n")
+    else:
+        log("Error during cache update")
+        
+    if result[0].replace(":", "") == command[2]:
+        installed = result[1].split()[1]
+        candidate = result[2].split()[1]
+    else:
+        log("Error during version check")
+        sys.exit(0)
+        
+    if len(installed) > 3 and installed != candidate:
+        log("Version installed  %s" %installed)
+        log("Version available  %s" %candidate)
+    elif installed:
+        log("Already on newest version  %s" %installed)
+    else:
+        log("No installed package found, probably manual install")
+        
     
 def _upgrademessage(msg, upgrade):
     # Don't show while watching a video
@@ -269,6 +320,12 @@ def _upgrademessage(msg, upgrade):
                                                                   __icon__))
     else:
         pass
+
+def _getpassword(text, langid, hidden=False):
+    keyboard = xbmc.Keyboard(text, __localize__(langid), hidden)
+    keyboard.doModal()
+    if (keyboard.isConfirmed()):
+        return keyboard.getText()
 
 if (__name__ == "__main__"):
     log('Version %s started' % __addonversion__)
