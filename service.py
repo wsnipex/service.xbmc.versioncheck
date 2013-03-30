@@ -35,7 +35,9 @@ __addonversion__ = __addon__.getAddonInfo('version')
 __addonname__    = __addon__.getAddonInfo('name')
 __addonpath__    = __addon__.getAddonInfo('path').decode('utf-8')
 __icon__         = __addon__.getAddonInfo('icon')
-__localize__    = __addon__.getLocalizedString
+__localize__     = __addon__.getLocalizedString
+
+pwd = ""
 
 def log(txt):
     if isinstance (txt,str):
@@ -162,7 +164,8 @@ def _versioncheck():
 def _versionchecklinux(packages):
     if (platform.dist()[0] == "Ubuntu" or platform.dist()[0] == "Debian"):
         log("running apt version check for package %s" %packages)
-        _versioncheckapt(packages)
+        _versioncheckshell(packages)
+        #_versioncheckapt(packages)  #TODO
     else:
         log("Unsupported platform %s" %platform.dist()[0])
         sys.exit(0)
@@ -176,13 +179,13 @@ def _versioncheckapt(packages):
     # try to import apt
     try:
         #import apt
-        import aptdfdf
+        import apt
         from aptdaemon import client
         from aptdaemon import errors
     except:
         log('python apt import error')
         # try the subprocess route
-        _versioncheckshell(["apt-cache", "policy", packages[0]])
+        _versioncheckshell(packages)
         sys.exit(0)
         
     apt_client = client.AptClient()
@@ -238,45 +241,47 @@ def _aptrunupgrade(apt_client, packages):
 
     return result
 
-def _versioncheckshell(command):
+def _versioncheckshell(packages):
     result = ''
     cresult = -1
     installed = ''
     candidate = ''
     pwd = ''
     
-    try:
-        from subprocess import check_output
-        from subprocess import call
-    except:
-        log("subprocess import error")
-        sys.exit(0)
     
+#     try:
+#         from subprocess import check_output
+#         from subprocess import call
+#     except:
+#         log("subprocess import error")
+#         sys.exit(0)
+
     log("Using shell version check")
-    print cresult
-    cresult = call(["apt-get", "update"])
+    #command = ["apt-cache", "policy", packages[0]]
+    cresult = _runshellcommand("update", True)
     log("Cache update result %s" %cresult)
     if cresult == 0:
-        result = check_output(command).split("\n")
-    elif cresult == 100:
-        # User needs to authenticate
-        pwd = _getpassword(__addonname__, 32022)
-        #if os.system('echo \'%s\' | sudo -S apt-get update' %pwd) == 0:
-        if call('echo \'%s\' | sudo -S %s' %(pwd, "apt-get update"), shell=True):
-            cmd = " ".join(command)
-            #result = os.system("echo \'%s\' | sudo -S %s" %(pwd, cmd))
-            #os.system('echo \'%s\' | sudo %s' %pwd, %" ".join(command))
-            result = check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True).split("\n")
+        result = _runshellcommand("policy",True, packages[0])
+
+#     elif cresult == 100:
+#         # User needs to authenticate
+#         pwd = _getpassword(__addonname__, 32022)
+#         #if os.system('echo \'%s\' | sudo -S apt-get update' %pwd) == 0:
+#         if call('echo \'%s\' | sudo -S %s' %(pwd, "apt-get update"), shell=True):
+#             cmd = " ".join(command)
+#             #result = os.system("echo \'%s\' | sudo -S %s" %(pwd, cmd))
+#             #os.system('echo \'%s\' | sudo %s' %pwd, %" ".join(command))
+#             result = check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True).split("\n")
     else:
         log("Error during cache update")
-        
-    if result[0].replace(":", "") == command[2]:
+
+    if result[0].replace(":", "") == packages[0]:
         installed = result[1].split()[1]
         candidate = result[2].split()[1]
     else:
         log("Error during version check")
         sys.exit(0)
-        
+
     if len(installed) > 3 and installed != candidate:
         log("Version installed  %s" %installed)
         log("Version available  %s" %candidate)
@@ -284,8 +289,41 @@ def _versioncheckshell(command):
         log("Already on newest version  %s" %installed)
     else:
         log("No installed package found, probably manual install")
-        
-    
+
+def _runshellcommand(action, sudo=False, package=""):
+    try:
+        from subprocess import check_output
+        from subprocess import call
+    except:
+        log("subprocess import error")
+        sys.exit(0)
+
+    global pwd
+    cresult = -1
+
+    if action == "update":
+        if sudo:
+            pwd = _getpassword(__addonname__, 32022)
+            return call('echo \'%s\' | sudo -S %s' %(pwd, 'apt-get update'), shell=True)
+        else:
+            return call(["apt-get", "update"])
+
+    elif action == "policy":
+        cmd = "apt-cache policy " + package
+        if sudo:
+            return check_output([cmd], shell=True).split("\n")
+        else:
+            return check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True).split("\n")
+    elif action == "upgrade":
+        command = ["apt-get", "upgrade"]
+
+#     cresult = call(command)
+#     log("Cache update result %s" %cresult)
+#             cmd = " ".join(command)
+#             #result = os.system("echo \'%s\' | sudo -S %s" %(pwd, cmd))
+#             #os.system('echo \'%s\' | sudo %s' %pwd, %" ".join(command))
+#             result = check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True).split("\n")
+
 def _upgrademessage(msg, upgrade):
     # Don't show while watching a video
     while(xbmc.Player().isPlayingVideo() and not xbmc.abortRequested):
@@ -321,7 +359,7 @@ def _upgrademessage(msg, upgrade):
     else:
         pass
 
-def _getpassword(text, langid, hidden=False):
+def _getpassword(text, langid, hidden=True):
     keyboard = xbmc.Keyboard(text, __localize__(langid), hidden)
     keyboard.doModal()
     if (keyboard.isConfirmed()):
