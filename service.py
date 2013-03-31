@@ -37,7 +37,7 @@ __addonpath__    = __addon__.getAddonInfo('path').decode('utf-8')
 __icon__         = __addon__.getAddonInfo('icon')
 __localize__     = __addon__.getLocalizedString
 
-pwd = ""
+sys.path.append(__addonpath__ + "/lib")
 
 def log(txt):
     if isinstance (txt,str):
@@ -164,8 +164,16 @@ def _versioncheck():
 def _versionchecklinux(packages):
     if (platform.dist()[0] == "Ubuntu" or platform.dist()[0] == "Debian"):
         log("running apt version check for package %s" %packages)
-        _versioncheckshell(packages)
+        #_versioncheckshell(packages)
         #_versioncheckapt(packages)  #TODO
+        from shellhandlerapt import ShellHandlerApt
+        sudo = True
+        handler = ShellHandlerApt(sudo)
+        installed, candidate = handler.check_version(packages[0])
+        if installed:
+            log("Version installed  %s" %installed)
+        if candidate:
+            log("Version available  %s" %candidate)
     else:
         log("Unsupported platform %s" %platform.dist()[0])
         sys.exit(0)
