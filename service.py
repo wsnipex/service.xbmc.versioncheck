@@ -24,26 +24,37 @@ import xbmc
 import xbmcaddon
 import xbmcgui
 import xbmcvfs
+import lib.common
+from lib.common import log
 
 if sys.version_info < (2, 7):
     import simplejson
 else:
     import json as simplejson
 
-__addon__        = xbmcaddon.Addon()
-__addonversion__ = __addon__.getAddonInfo('version')
-__addonname__    = __addon__.getAddonInfo('name')
-__addonpath__    = __addon__.getAddonInfo('path').decode('utf-8')
-__icon__         = __addon__.getAddonInfo('icon')
-__localize__     = __addon__.getLocalizedString
+# __addon__        = xbmcaddon.Addon()
+# __addonversion__ = __addon__.getAddonInfo('version')
+# __addonname__    = __addon__.getAddonInfo('name')
+# __addonpath__    = __addon__.getAddonInfo('path').decode('utf-8')
+# __icon__         = __addon__.getAddonInfo('icon')
+# __localize__     = __addon__.getLocalizedString
+__addon__        = lib.common.__addon__
+__addonversion__ = lib.common.__addonversion__
+__addonname__    = lib.common.__addonname__
+__addonpath__    = lib.common.__addonpath__
+__icon__         = lib.common.__icon__
+__localize__     = lib.common.__localize__
 
-sys.path.append(__addonpath__ + "/lib")
+#log = lib.common.log 
 
-def log(txt):
-    if isinstance (txt,str):
-        txt = txt.decode("utf-8")
-    message = u'%s: %s' % (__addonname__, txt)
-    xbmc.log(msg=message.encode("utf-8"), level=xbmc.LOGDEBUG)
+
+#sys.path.append(__addonpath__ + "/lib")
+
+# def log(txt):
+#     if isinstance (txt,str):
+#         txt = txt.decode("utf-8")
+#     message = u'%s: %s' % (__addonname__, txt)
+#     xbmc.log(msg=message.encode("utf-8"), level=xbmc.LOGDEBUG)
 
 class Main:
     def __init__(self):
@@ -166,7 +177,7 @@ def _versionchecklinux(packages):
         log("running apt version check for package %s" %packages)
         #_versioncheckshell(packages)
         #_versioncheckapt(packages)  #TODO
-        from shellhandlerapt import ShellHandlerApt
+        from lib.shellhandlerapt import ShellHandlerApt
         sudo = True
         handler = ShellHandlerApt(sudo)
         installed, candidate = handler.check_version(packages[0])

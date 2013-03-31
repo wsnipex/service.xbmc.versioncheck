@@ -16,20 +16,14 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 import xbmc
+from common import *
+
 try:
     from subprocess import check_output
     from subprocess import call
-    print "shellhandler initialised"
 except:
     log('python apt import error')
-    
 
-
-def log(txt):
-    if isinstance (txt,str):
-        txt = txt.decode("utf-8")
-    message = u'%s: %s' % ("XBMC Version Check", txt)
-    xbmc.log(msg=message.encode("utf-8"), level=xbmc.LOGDEBUG)
 
 class ShellHandlerApt:
 
@@ -102,9 +96,5 @@ class ShellHandlerApt:
 
     def _getpassword(self):
         if len(self._pwd) == 0:
-            #keyboard = xbmc.Keyboard(__localize__(32022), "", True)
-            keyboard = xbmc.Keyboard("", "XBMC Version Check, please enter your password", True)
-            keyboard.doModal()
-            if (keyboard.isConfirmed()):
-                self._pwd = keyboard.getText()
+            self._pwd = get_password_from_user()
         return self._pwd
