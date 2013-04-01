@@ -92,6 +92,7 @@ class ShellHandlerApt:
                 x = check_output('echo \'%s\' | sudo -S %s' %(self._getpassword(), _cmd), shell=True)
             else:
                 x = check_output(_cmd.split())
+            log("Upgrade successful")
         except Exception as error:
             log("Exception while executing shell command %s: %s" %(_cmd, error))
             return False
