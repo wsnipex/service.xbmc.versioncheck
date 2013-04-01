@@ -31,9 +31,9 @@ class ShellHandlerApt:
 
     def __init__(self, usesudo=False):
         self.sudo = usesudo
-        
 
-    def check_version(self, package):
+
+    def _check_versions(self, package):
         _cmd = "apt-cache policy " + package
 
         if not self._update_cache():
@@ -68,6 +68,22 @@ class ShellHandlerApt:
             return False
 
         return True
+
+    def check_upgrade_available(self, package):
+        '''returns True if newer package is available in the repositories'''
+        installed, candidate = self._check_versions(package)
+        if installed and candidate:
+            if installed != candidate:
+                log("Version installed  %s" %installed)
+                log("Version available  %s" %candidate)
+                return True
+            else:
+                log("Already on newest version")
+        elif not installed:
+                log("No installed package found")
+                return False
+        else:
+            return False
 
     def upgrade_package(self, package):
         _cmd = "apt-get install -y " + package
