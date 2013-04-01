@@ -25,7 +25,8 @@ import xbmcaddon
 import xbmcgui
 import xbmcvfs
 import lib.common
-from lib.common import log
+from lib.common import log, message_upgrade_success, message_restart
+from lib.common import upgrade_message as _upgrademessage
 
 if sys.version_info < (2, 7):
     import simplejson
@@ -177,18 +178,25 @@ def _versionchecklinux(packages):
         log("running apt version check for package %s" %packages)
         #_versioncheckshell(packages)
         #_versioncheckapt(packages)  #TODO
-        from lib.shellhandlerapt import ShellHandlerApt
-        sudo = True
-        handler = ShellHandlerApt(sudo)
-        installed, candidate = handler.check_version(packages[0])
-        if installed:
-            log("Version installed  %s" %installed)
-        if candidate:
-            log("Version available  %s" %candidate)
+        if _upgrademessage(__localize__(32015), True):
+            from lib.shellhandlerapt import ShellHandlerApt
+            sudo = True
+            handler = ShellHandlerApt(sudo)
+
     else:
         log("Unsupported platform %s" %platform.dist()[0])
         sys.exit(0)
-        
+
+    if handler:
+        if handler.check_upgrade_available(packages[0]):
+            if _upgrademessage(__localize__(32012), True):
+                if handler.upgrade_package(packages[0]): 
+                    message_upgrade_success()
+                    message_restart()
+    else:
+        log("Error: no handler found")
+
+
 def _versioncheckapt(packages):
     #check for linux using Apt
     oldversion = False
@@ -260,129 +268,129 @@ def _aptrunupgrade(apt_client, packages):
 
     return result
 
-def _versioncheckshell(packages):
-    result = ''
-    #cresult = -1
-    installed = ''
-    candidate = ''
-    #pwd = ''
+# def _versioncheckshell(packages):
+#     result = ''
+#     #cresult = -1
+#     installed = ''
+#     candidate = ''
+#     #pwd = ''
+# 
+#     log("Using shell version check")
+#     _runshellcommand("update", True)
+#     #log("Cache update result %s" %cresult)
+#     result = _runshellcommand("policy", True, packages[0])
+# 
+#     if result[0].replace(":", "") == packages[0]:
+#         installed = result[1].split()[1]
+#         candidate = result[2].split()[1]
+#     else:
+#         log("Error during version check")
+#         sys.exit(0)
+# 
+#     if len(installed) != 0 and installed != candidate:
+#         log("Version installed  %s" %installed)
+#         log("Version available  %s" %candidate)
+#         if _upgrademessage(__localize__(32012), True):
+#             if _runshellcommand("upgrade", True, packages[0]):
+#                 xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
+#                                                                           __localize__(32013) + '' + __localize__(32014),
+#                                                                           15000,
+#                                                                           __icon__))
+#         else:
+#             log("upgrade cancelled by user")
+#     elif installed:
+#         log("Already on newest version  %s" %installed)
+#     else:
+#         log("No installed package found, probably manual install")
+# 
+# def _runshellcommand(action, sudo=False, package=""):
+#     try:
+#         from subprocess import check_output
+#         from subprocess import call
+#     except:
+#         log("subprocess import error")
+#         sys.exit(0)
+# 
+#     if sudo:
+#         pwd = _getpassword(__addonname__, 32022)
+#     cresult = -1
+# 
+#     try:
+#         if action == "update":
+#             if sudo:
+#                 check_output('echo \'%s\' | sudo -S %s' %(pwd, 'apt-get update'), shell=True)
+#             else:
+#                 check_output(["apt-get", "update"])
+#     
+#         elif action == "policy":
+#             cmd = "apt-cache policy " + package
+#             if sudo:
+#                 return check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True).split("\n")
+#             else:
+#                 return check_output([cmd], shell=True).split("\n")
+#     
+#         elif action == "upgrade":
+#             cmd = "apt-get install -y " + package
+#             if sudo:
+#                 return check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True)
+#             else:
+#                 return check_output(cmd.split())
+#     
+#         elif action == "sysupgrade":
+#             cmd = "apt-get upgrade -y"
+#             if sudo:
+#                 return check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True)
+#             else:
+#                 return check_output(cmd.split())
+# 
+#         return 0
+#     except Exception as error:
+#         log("Exception while executing shell command %s: %s" %(cmd, error))
+#         sys.exit(0)
 
-    log("Using shell version check")
-    _runshellcommand("update", True)
-    #log("Cache update result %s" %cresult)
-    result = _runshellcommand("policy", True, packages[0])
+# def _upgrademessage(msg, upgrade):
+#     # Don't show while watching a video
+#     while(xbmc.Player().isPlayingVideo() and not xbmc.abortRequested):
+#         xbmc.sleep(1000)
+#     i = 0
+#     while(i < 5 and not xbmc.abortRequested):
+#         xbmc.sleep(1000)
+#         i += 1
+#     # Detect if it's first run and only show OK dialog + ask to disable on that
+#     firstrun = __addon__.getSetting("versioncheck_firstrun") != 'false'
+#     if firstrun and not xbmc.abortRequested:
+#         xbmcgui.Dialog().ok(__addonname__,
+#                             msg,
+#                             __localize__(32001),
+#                             __localize__(32002))
+#         # sets check to false which is checked on startup
+#         if xbmcgui.Dialog().yesno(__addonname__,
+#                                   __localize__(32009),
+#                                   __localize__(32010)):
+#             __addon__.setSetting("versioncheck_enable", 'false')
+#         # set first run to false to only show a popup next startup / every two days
+#         __addon__.setSetting("versioncheck_firstrun", 'false')
+#     # Show notification after firstrun
+#     elif not xbmc.abortRequested:
+#         log(__localize__(32001) + '' + __localize__(32002))
+#         if upgrade:
+#             return xbmcgui.Dialog().yesno(__addonname__, msg)
+#         else:
+#             xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
+#                                                                   __localize__(32001) + '' + __localize__(32002),
+#                                                                   15000,
+#                                                                   __icon__))
+#     else:
+#         pass
 
-    if result[0].replace(":", "") == packages[0]:
-        installed = result[1].split()[1]
-        candidate = result[2].split()[1]
-    else:
-        log("Error during version check")
-        sys.exit(0)
-
-    if len(installed) != 0 and installed != candidate:
-        log("Version installed  %s" %installed)
-        log("Version available  %s" %candidate)
-        if _upgrademessage(__localize__(32012), True):
-            if _runshellcommand("upgrade", True, packages[0]):
-                xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
-                                                                          __localize__(32013) + '' + __localize__(32014),
-                                                                          15000,
-                                                                          __icon__))
-        else:
-            log("upgrade cancelled by user")
-    elif installed:
-        log("Already on newest version  %s" %installed)
-    else:
-        log("No installed package found, probably manual install")
-
-def _runshellcommand(action, sudo=False, package=""):
-    try:
-        from subprocess import check_output
-        from subprocess import call
-    except:
-        log("subprocess import error")
-        sys.exit(0)
-
-    if sudo:
-        pwd = _getpassword(__addonname__, 32022)
-    cresult = -1
-
-    try:
-        if action == "update":
-            if sudo:
-                check_output('echo \'%s\' | sudo -S %s' %(pwd, 'apt-get update'), shell=True)
-            else:
-                check_output(["apt-get", "update"])
-    
-        elif action == "policy":
-            cmd = "apt-cache policy " + package
-            if sudo:
-                return check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True).split("\n")
-            else:
-                return check_output([cmd], shell=True).split("\n")
-    
-        elif action == "upgrade":
-            cmd = "apt-get install -y " + package
-            if sudo:
-                return check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True)
-            else:
-                return check_output(cmd.split())
-    
-        elif action == "sysupgrade":
-            cmd = "apt-get upgrade -y"
-            if sudo:
-                return check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True)
-            else:
-                return check_output(cmd.split())
-
-        return 0
-    except Exception as error:
-        log("Exception while executing shell command %s: %s" %(cmd, error))
-        sys.exit(0)
-
-def _upgrademessage(msg, upgrade):
-    # Don't show while watching a video
-    while(xbmc.Player().isPlayingVideo() and not xbmc.abortRequested):
-        xbmc.sleep(1000)
-    i = 0
-    while(i < 5 and not xbmc.abortRequested):
-        xbmc.sleep(1000)
-        i += 1
-    # Detect if it's first run and only show OK dialog + ask to disable on that
-    firstrun = __addon__.getSetting("versioncheck_firstrun") != 'false'
-    if firstrun and not xbmc.abortRequested:
-        xbmcgui.Dialog().ok(__addonname__,
-                            msg,
-                            __localize__(32001),
-                            __localize__(32002))
-        # sets check to false which is checked on startup
-        if xbmcgui.Dialog().yesno(__addonname__,
-                                  __localize__(32009),
-                                  __localize__(32010)):
-            __addon__.setSetting("versioncheck_enable", 'false')
-        # set first run to false to only show a popup next startup / every two days
-        __addon__.setSetting("versioncheck_firstrun", 'false')
-    # Show notification after firstrun
-    elif not xbmc.abortRequested:
-        log(__localize__(32001) + '' + __localize__(32002))
-        if upgrade:
-            return xbmcgui.Dialog().yesno(__addonname__, msg)
-        else:
-            xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
-                                                                  __localize__(32001) + '' + __localize__(32002),
-                                                                  15000,
-                                                                  __icon__))
-    else:
-        pass
-
-def _getpassword(text, langid, hidden=True):
-    global pwd
-    if len(pwd) == 0:
-        keyboard = xbmc.Keyboard(text, __localize__(langid), hidden)
-        keyboard.doModal()
-        if (keyboard.isConfirmed()):
-            pwd = keyboard.getText()
-    return pwd
+# def _getpassword(text, langid, hidden=True):
+#     global pwd
+#     if len(pwd) == 0:
+#         keyboard = xbmc.Keyboard(text, __localize__(langid), hidden)
+#         keyboard.doModal()
+#         if (keyboard.isConfirmed()):
+#             pwd = keyboard.getText()
+#     return pwd
 
 if (__name__ == "__main__"):
     log('Version %s started' % __addonversion__)
