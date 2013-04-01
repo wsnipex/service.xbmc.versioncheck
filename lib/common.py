@@ -18,6 +18,8 @@
 
 import xbmc
 import xbmcaddon
+import xbmcgui
+import xbmcvfs
 
 __addon__        = xbmcaddon.Addon()
 __addonversion__ = __addon__.getAddonInfo('version')
@@ -31,10 +33,55 @@ def log(txt):
         txt = txt.decode("utf-8")
     message = u'%s: %s' % ("XBMC Version Check", txt)
     xbmc.log(msg=message.encode("utf-8"), level=xbmc.LOGDEBUG)
-    
+
 def get_password_from_user():
     keyboard = xbmc.Keyboard("", __addonname__ + "," +__localize__(32022), True)
     keyboard.doModal()
     if (keyboard.isConfirmed()):
         pwd = keyboard.getText()
     return pwd
+
+def message_upgrade_success():
+    xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
+                                                              __localize__(32013),
+                                                              15000,
+                                                              __icon__))
+
+def message_restart():
+    if xbmcgui.Dialog().yesno(__addonname__, __localize__(32014)):
+        xbmc.executebuiltin("RestartApp")
+
+def upgrade_message(msg, upgrade):
+    # Don't show while watching a video
+    while(xbmc.Player().isPlayingVideo() and not xbmc.abortRequested):
+        xbmc.sleep(1000)
+    i = 0
+    while(i < 5 and not xbmc.abortRequested):
+        xbmc.sleep(1000)
+        i += 1
+    # Detect if it's first run and only show OK dialog + ask to disable on that
+    firstrun = __addon__.getSetting("versioncheck_firstrun") != 'false'
+    if firstrun and not xbmc.abortRequested:
+        xbmcgui.Dialog().ok(__addonname__,
+                            msg,
+                            __localize__(32001),
+                            __localize__(32002))
+        # sets check to false which is checked on startup
+        if xbmcgui.Dialog().yesno(__addonname__,
+                                  __localize__(32009),
+                                  __localize__(32010)):
+            __addon__.setSetting("versioncheck_enable", 'false')
+        # set first run to false to only show a popup next startup / every two days
+        __addon__.setSetting("versioncheck_firstrun", 'false')
+    # Show notification after firstrun
+    elif not xbmc.abortRequested:
+        log(__localize__(32001) + '' + __localize__(32002))
+        if upgrade:
+            return xbmcgui.Dialog().yesno(__addonname__, msg)
+        else:
+            xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
+                                                                  __localize__(32001) + '' + __localize__(32002),
+                                                                  15000,
+                                                                  __icon__))
+    else:
+        pass
