@@ -22,7 +22,7 @@ try:
     from subprocess import check_output
     from subprocess import call
 except:
-    log('python apt import error')
+    log('subprocess import error')
 
 
 class ShellHandlerApt:
