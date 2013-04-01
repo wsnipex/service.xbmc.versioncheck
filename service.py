@@ -33,12 +33,6 @@ if sys.version_info < (2, 7):
 else:
     import json as simplejson
 
-# __addon__        = xbmcaddon.Addon()
-# __addonversion__ = __addon__.getAddonInfo('version')
-# __addonname__    = __addon__.getAddonInfo('name')
-# __addonpath__    = __addon__.getAddonInfo('path').decode('utf-8')
-# __icon__         = __addon__.getAddonInfo('icon')
-# __localize__     = __addon__.getLocalizedString
 __addon__        = lib.common.__addon__
 __addonversion__ = lib.common.__addonversion__
 __addonname__    = lib.common.__addonname__
@@ -46,16 +40,6 @@ __addonpath__    = lib.common.__addonpath__
 __icon__         = lib.common.__icon__
 __localize__     = lib.common.__localize__
 
-#log = lib.common.log 
-
-
-#sys.path.append(__addonpath__ + "/lib")
-
-# def log(txt):
-#     if isinstance (txt,str):
-#         txt = txt.decode("utf-8")
-#     message = u'%s: %s' % (__addonname__, txt)
-#     xbmc.log(msg=message.encode("utf-8"), level=xbmc.LOGDEBUG)
 
 class Main:
     def __init__(self):
@@ -175,13 +159,17 @@ def _versioncheck():
 
 def _versionchecklinux(packages):
     if (platform.dist()[0] == "Ubuntu" or platform.dist()[0] == "Debian"):
-        log("running apt version check for package %s" %packages)
-        #_versioncheckshell(packages)
-        #_versioncheckapt(packages)  #TODO
-        if _upgrademessage(__localize__(32015), True):
-            from lib.shellhandlerapt import ShellHandlerApt
-            sudo = True
-            handler = ShellHandlerApt(sudo)
+        try:
+            # try aptdeamon first
+            from lib.aptdeamonhandler import AptdeamonHandler
+            handler = AptdeamonHandler()
+        except:
+            # fallback to shell
+            # since we need the user password, ask to check for new version first
+            if _upgrademessage(__localize__(32015), True):
+                from lib.shellhandlerapt import ShellHandlerApt
+                sudo = True
+                handler = ShellHandlerApt(sudo)
 
     else:
         log("Unsupported platform %s" %platform.dist()[0])
@@ -197,200 +185,76 @@ def _versionchecklinux(packages):
         log("Error: no handler found")
 
 
-def _versioncheckapt(packages):
-    #check for linux using Apt
-    oldversion = False
-    msg = ''
-    result = ''
-    
-    # try to import apt
-    try:
-        #import apt
-        import apt
-        from aptdaemon import client
-        from aptdaemon import errors
-    except:
-        log('python apt import error')
-        # try the subprocess route
-        _versioncheckshell(packages)
-        sys.exit(0)
-        
-    apt_client = client.AptClient()
-    try:
-        result = apt_client.update_cache(wait=True)
-        if (result == "exit-success"):
-            log("Finished updating the cache")
-        else:
-            log("Error updating the cache %s" %result) 
-    except errors.NotAuthorizedError:
-        log("You are not allowed to update the cache")
-        sys.exit(0)
-    
-    trans = apt_client.upgrade_packages(packages)
-    trans.simulate(reply_handler=_apttransstarted, error_handler=_apterrorhandler)
-    pkg = trans.packages[4][0]
-    if pkg in packages:
-       cache=apt.Cache()
-       cache.open(None)
-       cache.upgrade()
-       if (cache[pkg].installed and cache[pkg].installed.version != cache[pkg].candidate.version):
-           log("Version installed  %s" %cache[pkg].installed.version)
-           log("Version available  %s" %cache[pkg].candidate.version)
-           # Ask user to upgrade
-           if _upgrademessage(__localize__(32012), True):
-               if _aptrunupgrade(apt_client, packages) == "exit-success":
-                   xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
-                                                                              __localize__(32013) + '' + __localize__(32014),
-                                                                              15000,
-                                                                               __icon__))
-           else:
-               log("upgrade cancelled by user")
-       elif (cache[pkg].installed):
-           log("Already on newest version  %s" %cache[pkg].installed.version)
-       else:
-           log("No installed package found, probably manual install")
-
-           
-def _apttransstarted():
-    pass
-
-def _apterrorhandler(error):
-    log("Apt Error %s" %error)
-
-def _aptrunupgrade(apt_client, packages):
-    result = ''
-    try:
-        log("Installing new version")
-        result = apt_client.upgrade_packages(packages, wait=True)
-        log("Installation finished with %s" %result)
-    except Exception as error:
-        log("Exception while updating: %s" %error)
-
-    return result
-
-# def _versioncheckshell(packages):
+# def _versioncheckapt(packages):
+#     #check for linux using Apt
+#     oldversion = False
+#     msg = ''
 #     result = ''
-#     #cresult = -1
-#     installed = ''
-#     candidate = ''
-#     #pwd = ''
-# 
-#     log("Using shell version check")
-#     _runshellcommand("update", True)
-#     #log("Cache update result %s" %cresult)
-#     result = _runshellcommand("policy", True, packages[0])
-# 
-#     if result[0].replace(":", "") == packages[0]:
-#         installed = result[1].split()[1]
-#         candidate = result[2].split()[1]
-#     else:
-#         log("Error during version check")
-#         sys.exit(0)
-# 
-#     if len(installed) != 0 and installed != candidate:
-#         log("Version installed  %s" %installed)
-#         log("Version available  %s" %candidate)
-#         if _upgrademessage(__localize__(32012), True):
-#             if _runshellcommand("upgrade", True, packages[0]):
-#                 xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
-#                                                                           __localize__(32013) + '' + __localize__(32014),
-#                                                                           15000,
-#                                                                           __icon__))
-#         else:
-#             log("upgrade cancelled by user")
-#     elif installed:
-#         log("Already on newest version  %s" %installed)
-#     else:
-#         log("No installed package found, probably manual install")
-# 
-# def _runshellcommand(action, sudo=False, package=""):
+#     
+#     # try to import apt
 #     try:
-#         from subprocess import check_output
-#         from subprocess import call
+#         #import apt
+#         import apt
+#         from aptdaemon import client
+#         from aptdaemon import errors
 #     except:
-#         log("subprocess import error")
+#         log('python apt import error')
+#         # try the subprocess route
+#         _versioncheckshell(packages)
 #         sys.exit(0)
-# 
-#     if sudo:
-#         pwd = _getpassword(__addonname__, 32022)
-#     cresult = -1
-# 
+#         
+#     apt_client = client.AptClient()
 #     try:
-#         if action == "update":
-#             if sudo:
-#                 check_output('echo \'%s\' | sudo -S %s' %(pwd, 'apt-get update'), shell=True)
-#             else:
-#                 check_output(["apt-get", "update"])
-#     
-#         elif action == "policy":
-#             cmd = "apt-cache policy " + package
-#             if sudo:
-#                 return check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True).split("\n")
-#             else:
-#                 return check_output([cmd], shell=True).split("\n")
-#     
-#         elif action == "upgrade":
-#             cmd = "apt-get install -y " + package
-#             if sudo:
-#                 return check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True)
-#             else:
-#                 return check_output(cmd.split())
-#     
-#         elif action == "sysupgrade":
-#             cmd = "apt-get upgrade -y"
-#             if sudo:
-#                 return check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True)
-#             else:
-#                 return check_output(cmd.split())
-# 
-#         return 0
-#     except Exception as error:
-#         log("Exception while executing shell command %s: %s" %(cmd, error))
-#         sys.exit(0)
-
-# def _upgrademessage(msg, upgrade):
-#     # Don't show while watching a video
-#     while(xbmc.Player().isPlayingVideo() and not xbmc.abortRequested):
-#         xbmc.sleep(1000)
-#     i = 0
-#     while(i < 5 and not xbmc.abortRequested):
-#         xbmc.sleep(1000)
-#         i += 1
-#     # Detect if it's first run and only show OK dialog + ask to disable on that
-#     firstrun = __addon__.getSetting("versioncheck_firstrun") != 'false'
-#     if firstrun and not xbmc.abortRequested:
-#         xbmcgui.Dialog().ok(__addonname__,
-#                             msg,
-#                             __localize__(32001),
-#                             __localize__(32002))
-#         # sets check to false which is checked on startup
-#         if xbmcgui.Dialog().yesno(__addonname__,
-#                                   __localize__(32009),
-#                                   __localize__(32010)):
-#             __addon__.setSetting("versioncheck_enable", 'false')
-#         # set first run to false to only show a popup next startup / every two days
-#         __addon__.setSetting("versioncheck_firstrun", 'false')
-#     # Show notification after firstrun
-#     elif not xbmc.abortRequested:
-#         log(__localize__(32001) + '' + __localize__(32002))
-#         if upgrade:
-#             return xbmcgui.Dialog().yesno(__addonname__, msg)
+#         result = apt_client.update_cache(wait=True)
+#         if (result == "exit-success"):
+#             log("Finished updating the cache")
 #         else:
-#             xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
-#                                                                   __localize__(32001) + '' + __localize__(32002),
-#                                                                   15000,
-#                                                                   __icon__))
-#     else:
-#         pass
-
-# def _getpassword(text, langid, hidden=True):
-#     global pwd
-#     if len(pwd) == 0:
-#         keyboard = xbmc.Keyboard(text, __localize__(langid), hidden)
-#         keyboard.doModal()
-#         if (keyboard.isConfirmed()):
-#             pwd = keyboard.getText()
-#     return pwd
+#             log("Error updating the cache %s" %result) 
+#     except errors.NotAuthorizedError:
+#         log("You are not allowed to update the cache")
+#         sys.exit(0)
+#     
+#     trans = apt_client.upgrade_packages(packages)
+#     trans.simulate(reply_handler=_apttransstarted, error_handler=_apterrorhandler)
+#     pkg = trans.packages[4][0]
+#     if pkg in packages:
+#        cache=apt.Cache()
+#        cache.open(None)
+#        cache.upgrade()
+#        if (cache[pkg].installed and cache[pkg].installed.version != cache[pkg].candidate.version):
+#            log("Version installed  %s" %cache[pkg].installed.version)
+#            log("Version available  %s" %cache[pkg].candidate.version)
+#            # Ask user to upgrade
+#            if _upgrademessage(__localize__(32012), True):
+#                if _aptrunupgrade(apt_client, packages) == "exit-success":
+#                    xbmc.executebuiltin("XBMC.Notification(%s, %s, %d, %s)" %(__addonname__,
+#                                                                               __localize__(32013) + '' + __localize__(32014),
+#                                                                               15000,
+#                                                                                __icon__))
+#            else:
+#                log("upgrade cancelled by user")
+#        elif (cache[pkg].installed):
+#            log("Already on newest version  %s" %cache[pkg].installed.version)
+#        else:
+#            log("No installed package found, probably manual install")
+# 
+#            
+# def _apttransstarted():
+#     pass
+# 
+# def _apterrorhandler(error):
+#     log("Apt Error %s" %error)
+# 
+# def _aptrunupgrade(apt_client, packages):
+#     result = ''
+#     try:
+#         log("Installing new version")
+#         result = apt_client.upgrade_packages(packages, wait=True)
+#         log("Installation finished with %s" %result)
+#     except Exception as error:
+#         log("Exception while updating: %s" %error)
+# 
+#     return result
 
 if (__name__ == "__main__"):
     log('Version %s started' % __addonversion__)
