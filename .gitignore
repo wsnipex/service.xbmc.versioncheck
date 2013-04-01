@@ -1,4 +1,6 @@
+*.py~
 *.pyo
+*.pyc
 .project
 .pydevproject
 pysrc
