@@ -98,17 +98,18 @@ class ShellHandlerApt:
 
         return True
 
-    def update_system(self):
+    def upgrade_system(self):
         _cmd = "apt-get upgrade -y"
         try:
             if self.sudo:
-                return check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True)
+                x = check_output('echo \'%s\' | sudo -S %s' %(pwd, cmd), shell=True)
             else:
-                return check_output(cmd.split())
+                x = check_output(cmd.split())
         except Exception as error:
             log("Exception while executing shell command %s: %s" %(_cmd, error))
             return False
-        return result
+
+        return True
 
     def _getpassword(self):
         if len(self._pwd) == 0:
