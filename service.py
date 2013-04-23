@@ -65,7 +65,7 @@ def _versioncheck():
 
 
 def _versionchecklinux(packages):
-    if (platform.dist()[0] == "Ubuntu" or platform.dist()[0] == "Debian"):
+    if (platform.dist()[0] == "Ubuntu" or platform.dist()[0] == "Debian" or platform.dist()[0] == "LinuxMint"):
         handler = False
         try:
             # try aptdeamon first
