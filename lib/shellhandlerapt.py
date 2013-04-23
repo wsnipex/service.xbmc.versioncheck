@@ -51,6 +51,10 @@ class ShellHandlerApt:
         if result[0].replace(":", "") == package:
             installed = result[1].split()[1]
             candidate = result[2].split()[1]
+            if installed == "(none)":
+                installed = False
+            if candidate == "(none)":
+                candiate = False
             return installed, candidate
         else:
             log("ShellHandlerApt: error during version check")
