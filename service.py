@@ -78,6 +78,10 @@ def _versionchecklinux(packages):
                 from lib.shellhandlerapt import ShellHandlerApt
                 sudo = True
                 handler = ShellHandlerApt(sudo)
+            elif dialog_yesno(32009, 32010):
+                log("disabling addon by user request")
+                __addon__.setSetting("versioncheck_enable", 'false')
+
         if handler:
             if handler.check_upgrade_available(packages[0]):
                 if _upgrademessage(32012, True):
